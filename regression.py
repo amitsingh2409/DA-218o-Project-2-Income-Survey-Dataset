@@ -125,7 +125,7 @@ plt.close()
 
 # 2.6. Pairwise Relationships
 # Select a subset of important features for pairplot
-important_features = ["Total_income", "Age_gap", "Earning", "Work_yearly", "Total_hour_ref"]
+important_features = ["Total_income", "Salary_wages", "Family_mem", "RENTM", "CFCOMP"]
 if all(col in df.columns for col in important_features):
     sns.pairplot(df[important_features], height=2.5)
     plt.suptitle("Pairwise Relationships of Key Features", y=1.02)
