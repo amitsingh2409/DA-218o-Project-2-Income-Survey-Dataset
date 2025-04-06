@@ -332,7 +332,7 @@ def build_nonlinear_model(X, y):
 
 
 # Build non-linear model
-nonlinear_model, trace_nonlinear = build_nonlinear_model(X_train.values, y_train.values)
+nonlinear_model, trace_nonlinear = build_nonlinear_model(X_train.values, y_train)
 
 # Evaluate non-linear model
 az.summary(trace_nonlinear)
@@ -362,7 +362,7 @@ def build_robust_model(X, y):
 
 
 # Build robust model
-robust_model, trace_robust = build_robust_model(X_train.values, y_train.values)
+robust_model, trace_robust = build_robust_model(X_train.values, y_train)
 
 # Evaluate robust model
 az.summary(trace_robust)
@@ -378,7 +378,8 @@ print(model_comparison)
 
 # Plot comparison
 az.plot_compare(model_comparison)
-plt.show()
+plt.savefig("output/model_comparison.png")
+plt.close()
 
 # 7. Feature Importance Analysis
 # Extract coefficient means
@@ -400,38 +401,4 @@ plt.ylabel("Feature")
 plt.title("Feature Importance")
 plt.tight_layout()
 plt.savefig("output/feature_importance.png")
-plt.close()
-
-# 8. Posterior Predictive Distribution
-# Generate posterior predictive samples
-with linear_model:
-    posterior_predictive = pm.sample_posterior_predictive(trace)
-
-# Plot posterior predictive distribution for a few random samples
-test_idx = np.random.choice(range(len(y_test)), 5, replace=False)
-
-plt.figure(figsize=(15, 10))
-for i, idx in enumerate(test_idx):
-    plt.subplot(2, 3, i + 1)
-
-    # Get predictive samples for this observation
-    pred_samples = posterior_predictive.posterior_predictive["likelihood"][
-        :, :, idx
-    ].values.flatten()
-
-    # Plot histogram of predictions
-    plt.hist(pred_samples, bins=30, alpha=0.6, density=True)
-    plt.axvline(
-        y_test.iloc[idx], color="r", linestyle="--", label=f"Actual: {y_test.iloc[idx]:.2f}"
-    )
-
-    # Mean prediction
-    mean_pred = pred_samples.mean()
-    plt.axvline(mean_pred, color="g", linestyle="-", label=f"Mean: {mean_pred:.2f}")
-
-    plt.title(f"Sample {idx}")
-    plt.legend()
-
-plt.tight_layout()
-plt.savefig("output/posterior_predictive_distribution.png")
 plt.close()
