@@ -1,7 +1,7 @@
+import seaborn as sns
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans, DBSCAN
 from sklearn.decomposition import PCA
@@ -18,7 +18,7 @@ income_vars = [
     "Salary_wages",
     "Earning",
     "Investment",
-    "Self_emp_income",
+    "Self_emp_income.1",
     "Pension",
 ]
 
@@ -28,13 +28,13 @@ for i, var in enumerate(income_vars):
     plt.hist(df[var], bins=30)
     plt.title(f"Distribution of {var}")
     plt.tight_layout()
-plt.savefig("output/income_histograms.png")
+plt.savefig("output/clustering/income_histograms.png")
 
 # Correlation matrix for income variables
 plt.figure(figsize=(10, 8))
 sns.heatmap(df[income_vars].corr(), annot=True, cmap="coolwarm")
 plt.title("Correlation Matrix of Income Variables")
-plt.savefig("output/income_correlation_matrix.png")
+plt.savefig("output/clustering/income_correlation_matrix.png")
 
 # Select features for clustering
 cluster_features = [
@@ -59,7 +59,7 @@ sns.boxplot(data=pd.DataFrame(X_scaled, columns=cluster_features))
 plt.title("Boxplot of Scaled Features")
 plt.xticks(rotation=45)
 plt.tight_layout()
-plt.savefig("output/boxplot_scaled_features.png")
+plt.savefig("output/clustering/boxplot_scaled_features.png")
 plt.close()
 
 
@@ -74,7 +74,7 @@ plt.title("PCA of Income Variables")
 plt.xlabel("Principal Component 1")
 plt.ylabel("Principal Component 2")
 plt.grid(True)
-plt.savefig("output/pca_income.png")
+plt.savefig("output/clustering/pca_income.png")
 plt.close()
 
 # Explained variance
@@ -84,7 +84,7 @@ plt.bar(range(1, len(pca.explained_variance_ratio_) + 1), pca.explained_variance
 plt.xlabel("Principal Component")
 plt.ylabel("Explained Variance Ratio")
 plt.title("Explained Variance by Components")
-plt.savefig("output/explained_variance.png")
+plt.savefig("output/clustering/explained_variance.png")
 plt.close()
 
 # Elbow method to find optimal K
@@ -100,7 +100,7 @@ plt.title("Elbow Method for Optimal K")
 plt.xlabel("Number of clusters")
 plt.ylabel("Inertia")
 plt.grid(True)
-plt.savefig("output/elbow_method.png")
+plt.savefig("output/clustering/elbow_method.png")
 plt.close()
 
 # Silhouette analysis
@@ -118,7 +118,7 @@ plt.title("Silhouette Score for Different K Values")
 plt.xlabel("Number of clusters")
 plt.ylabel("Silhouette Score")
 plt.grid(True)
-plt.savefig("output/silhouette_analysis.png")
+plt.savefig("output/clustering/silhouette_analysis.png")
 plt.close()
 
 # Dendrogram to visualize hierarchical clustering
@@ -128,7 +128,7 @@ plt.title("Dendrogram for Hierarchical Clustering")
 plt.xlabel("Samples")
 plt.ylabel("Euclidean Distance")
 plt.axhline(y=6, color="r", linestyle="--")
-plt.savefig("output/dendrogram.png")
+plt.savefig("output/clustering/dendrogram.png")
 plt.close()
 
 
@@ -153,7 +153,7 @@ plt.grid(True)
 centroids_pca = pca.transform(kmeans.cluster_centers_)
 plt.scatter(centroids_pca[:, 0], centroids_pca[:, 1], marker="X", s=200, c="red", label="Centroids")
 plt.legend()
-plt.savefig("output/kmeans_clusters_pca.png")
+plt.savefig("output/clustering/kmeans_clusters_pca.png")
 plt.close()
 
 # Analyze clusters
@@ -170,7 +170,7 @@ plt.xticks(rotation=45)
 plt.legend(title="Cluster")
 plt.grid(True, axis="y")
 plt.tight_layout()
-plt.savefig("output/cluster_profiles.png")
+plt.savefig("output/clustering/cluster_profiles.png")
 plt.close()
 
 # Boxplots for each feature by cluster
@@ -180,7 +180,7 @@ for feature in cluster_features:
     plt.title(f"Distribution of {feature} by Cluster")
     plt.grid(True, axis="y")
     plt.tight_layout()
-    plt.savefig(f"output/boxplot_{feature}_by_cluster.png")
+    plt.savefig(f"output/clustering/boxplot_{feature}_by_cluster.png")
     plt.close()
 
 # Analyze demographic composition of clusters
@@ -196,7 +196,7 @@ for var in demographic_vars:
     plt.xticks(rotation=0)
     plt.grid(True, axis="y")
     plt.tight_layout()
-    plt.savefig(f"output/distribution_{var}_by_cluster.png")
+    plt.savefig(f"output/clustering/distribution_{var}_by_cluster.png")
     plt.close()
 
 # Apply hierarchical clustering
@@ -229,7 +229,7 @@ plt.xlabel("PC1")
 plt.ylabel("PC2")
 
 plt.tight_layout()
-plt.savefig("output/comparison_kmeans_hierarchical.png")
+plt.savefig("output/clustering/comparison_kmeans_hierarchical.png")
 plt.close()
 
 # Apply DBSCAN
@@ -244,7 +244,7 @@ plt.title("DBSCAN Clustering Visualized with PCA")
 plt.xlabel("Principal Component 1")
 plt.ylabel("Principal Component 2")
 plt.grid(True)
-plt.savefig("output/dbscan_clusters_pca.png")
+plt.savefig("output/clustering/dbscan_clusters_pca.png")
 plt.close()
 
 # Count samples in each cluster
