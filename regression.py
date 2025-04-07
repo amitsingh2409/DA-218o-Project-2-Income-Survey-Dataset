@@ -603,3 +603,16 @@ plt.title("Feature Importance")
 plt.tight_layout()
 plt.savefig("output/regression/regression_feature_importance.png")
 plt.close()
+
+
+"""
+Training RMSE: 0.37
+Testing RMSE: 0.36
+Training R²: 0.8612
+Testing R²: 0.8650
+
+Training RMSE: 0.36
+Testing RMSE: 0.35
+Training R²: 0.8718
+Testing R²: 0.8747
+"""
