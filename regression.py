@@ -453,7 +453,7 @@ plt.close()
 
 # Robust Regression (t-distributed errors)
 def build_robust_model(X, y):
-    with pm.Model() as improved_robust_model:
+    with pm.Model() as robust_model:
         # More flexible priors
         intercept = pm.Normal("intercept", mu=0, sigma=20)
         beta_linear = pm.Normal("beta_linear", mu=0, sigma=2, shape=X.shape[1])
@@ -615,4 +615,9 @@ Training RMSE: 0.36
 Testing RMSE: 0.35
 Training R²: 0.8718
 Testing R²: 0.8747
+
+Training RMSE: 0.38
+Testing RMSE: 0.37
+Training R²: 0.8540
+Testing R²: 0.8585
 """

@@ -264,3 +264,19 @@ plt.title("Confusion Matrix")
 plt.tight_layout()
 plt.savefig("output/classification/confusion_matrix.png")
 plt.close()
+
+"""
+Classification Report:
+              precision    recall  f1-score   support
+
+           3       0.66      0.82      0.73      1564
+           1       0.77      0.90      0.83      5936
+           4       0.60      0.67      0.63      2661
+          96       1.00      1.00      1.00      2566
+           2       0.21      0.00      0.00      1313
+          99       0.23      0.02      0.04       489
+
+    accuracy                           0.76     14529
+   macro avg       0.58      0.57      0.54     14529
+weighted avg       0.70      0.76      0.71     14529
+"""
