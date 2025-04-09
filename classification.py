@@ -172,23 +172,16 @@ with pm.Model() as multinomial_model:
     # Simpler, more robust priors
     alpha = pm.Normal("alpha", mu=0, sigma=2, shape=(n_classes - 1))
     beta = pm.Normal("beta", mu=0, sigma=1, shape=(n_features, n_classes - 1))
-
-    # Compute linear combinations for all non-reference classes
     activation = pm.math.dot(X_train, beta) + alpha
 
-    # Create reference class column (zeros)
     zeros = np.zeros((X_train.shape[0], 1))
 
-    # Concatenate zeros and activation for full probability matrix
     logits = pm.math.concatenate([zeros, activation], axis=1)
 
-    # Apply softmax to get probabilities
     p = pm.math.softmax(logits, axis=1)
 
-    # Categorical likelihood
     observed = pm.Categorical("observed", p=p, observed=y_train)
 
-    # More conservative sampling to help with initialization
     trace = pm.sample(
         draws=500,
         tune=1000,
@@ -199,25 +192,21 @@ with pm.Model() as multinomial_model:
         cores=1,
     )
 
-# Assess model convergence and diagnostics
 az.plot_trace(trace)
 plt.tight_layout()
 plt.savefig("output/classification/trace_plot.png")
 plt.close()
 
-# Summary of parameter estimates
 summary = az.summary(trace, round_to=2)
 print("\nParameter Estimates Summary:")
 print(summary)
 
-# Plot parameter distributions
 az.plot_forest(trace, var_names=["alpha", "beta"], combined=True)
 plt.tight_layout()
 plt.savefig("output/classification/parameter_forest_plot.png")
 plt.close()
 
 
-# Function to predict class using the trained model
 def predict_class(X_data, trace):
     # Extract posterior samples
     alpha_samples = trace.posterior["alpha"].values
@@ -241,20 +230,16 @@ def predict_class(X_data, trace):
     return np.argmax(prob, axis=1), prob
 
 
-# Make predictions
 y_pred, probabilities = predict_class(X_test, trace)
 
-# Calculate accuracy
 accuracy = accuracy_score(y_test, y_pred)
 print(f"\nTest Accuracy: {accuracy:.4f}")
 
-# Classification report
 print("\nClassification Report:")
 class_names = [str(x) for x in list(marital_status_mapping.keys())]
 class_report = classification_report(y_test, y_pred, target_names=class_names)
 print(class_report)
 
-# Confusion matrix
 plt.figure(figsize=(12, 10))
 cm = confusion_matrix(y_test, y_pred)
 sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=class_names, yticklabels=class_names)
@@ -280,3 +265,121 @@ Classification Report:
    macro avg       0.58      0.57      0.54     14529
 weighted avg       0.70      0.76      0.71     14529
 """
+
+# Define the PyMC model with informative priors
+with pm.Model() as informative_model:
+    # Informative priors for intercepts
+    alpha = pm.Normal("alpha", mu=[0, 0.5, -1, -0.5, -1], sigma=1, shape=(n_classes - 1))
+
+    beta_mus = np.zeros((n_features, n_classes - 1))
+
+    age_gap_idx = features.index("Age_gap")
+    family_mem_idx = features.index("Family_mem")
+    income_idx = features.index("income_after_tax")
+    total_income_idx = features.index("Total_income")
+    child_benefit_idx = features.index("Child_benefit")
+
+    beta_mus[age_gap_idx, 0] = 0.8  # Older -> more likely married
+    beta_mus[age_gap_idx, 2] = 0.5  # Older -> more likely widowed
+    beta_mus[age_gap_idx, 4] = -0.5  # Younger -> more likely separated
+
+    beta_mus[family_mem_idx, 0] = 0.7  # More family members -> married
+    beta_mus[family_mem_idx, 3] = -0.4  # Fewer family members -> divorced
+
+    # Prior means for income after tax
+    beta_mus[income_idx, 0] = 0.5  # Higher income -> more likely married
+    beta_mus[income_idx, 2] = -0.3  # Lower income -> more likely widowed
+
+    # Child benefit more associated with certain marital statuses
+    beta_mus[child_benefit_idx, 0] = 0.4  # Child benefit -> married
+    beta_mus[child_benefit_idx, 4] = 0.3  # Child benefit -> separated
+
+    beta = pm.Normal("beta", mu=beta_mus, sigma=0.5, shape=(n_features, n_classes - 1))
+
+    activation = pm.math.dot(X_train, beta) + alpha
+
+    zeros = np.zeros((X_train.shape[0], 1))
+
+    logits = pm.math.concatenate([zeros, activation], axis=1)
+
+    p = pm.math.softmax(logits, axis=1)
+
+    observed = pm.Categorical("observed", p=p, observed=y_train)
+
+    trace = pm.sample(
+        draws=500,
+        tune=1500,
+        chains=2,
+        target_accept=0.9,
+        init="adapt_diag",
+        return_inferencedata=True,
+        cores=1,
+    )
+
+
+az.plot_trace(trace)
+plt.tight_layout()
+plt.savefig("output/classification/informative_trace_plot.png")
+plt.close()
+
+summary = az.summary(trace, round_to=2)
+print("\nParameter Estimates Summary:")
+print(summary)
+
+az.plot_forest(trace, var_names=["alpha", "beta"], combined=True)
+plt.tight_layout()
+plt.savefig("output/classification/informative_parameter_forest_plot.png")
+plt.close()
+
+
+def predict_class_with_uncertainty(X_data, trace, samples=100):
+    alpha_samples = trace.posterior["alpha"].values
+    beta_samples = trace.posterior["beta"].values
+
+    n_chains = alpha_samples.shape[0]
+    n_draws = alpha_samples.shape[1]
+
+    chain_indices = np.random.randint(0, n_chains, size=samples)
+    draw_indices = np.random.randint(0, n_draws, size=samples)
+
+    all_probs = np.zeros((X_data.shape[0], trace.posterior["alpha"].shape[2] + 1, samples))
+
+    for i in range(samples):
+        chain_idx = chain_indices[i]
+        draw_idx = draw_indices[i]
+
+        alpha_sample = alpha_samples[chain_idx, draw_idx]
+        beta_sample = beta_samples[chain_idx, draw_idx]
+
+        # Calculate activation
+        activation = np.dot(X_data, beta_sample) + alpha_sample
+
+        # Add zeros for reference class
+        zero_vec = np.zeros((X_data.shape[0], 1))
+        all_activation = np.concatenate([zero_vec, activation.reshape(X_data.shape[0], -1)], axis=1)
+
+        # Apply softmax
+        all_probs[:, :, i] = np.exp(all_activation) / np.sum(
+            np.exp(all_activation), axis=1, keepdims=True
+        )
+
+    mean_probs = all_probs.mean(axis=2)
+
+    predicted_classes = np.argmax(mean_probs, axis=1)
+
+    epsilon = 1e-10  # To avoid log(0)
+    entropy = -np.sum(mean_probs * np.log(mean_probs + epsilon), axis=1)
+    max_entropy = -np.log(1 / mean_probs.shape[1])  # Maximum possible entropy
+    uncertainty = entropy / max_entropy  # Normalized uncertainty [0,1]
+
+    # Calculate 95% credible intervals for each class probability
+    credible_intervals = {}
+    for class_idx in range(all_probs.shape[1]):
+        lower_bound = np.percentile(all_probs[:, class_idx, :], 2.5, axis=1)
+        upper_bound = np.percentile(all_probs[:, class_idx, :], 97.5, axis=1)
+        credible_intervals[f"class_{class_idx}"] = (lower_bound, upper_bound)
+
+    return predicted_classes, mean_probs, uncertainty, credible_intervals
+
+
+y_pred, probs, _, _ = predict_class_with_uncertainty(X_test, trace)

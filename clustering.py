@@ -1,13 +1,15 @@
+import matplotlib
 import seaborn as sns
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
-from sklearn.cluster import KMeans, DBSCAN
 from sklearn.decomposition import PCA
-from sklearn.metrics import silhouette_score
-import scipy.cluster.hierarchy as shc
-from sklearn.cluster import AgglomerativeClustering
+from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
+
+matplotlib.use("Agg")
+plt.style.use("seaborn-v0_8-darkgrid")
+sns.set_context("talk")
 
 df = pd.read_csv("data/Income_Survey_Dataset.csv")
 
@@ -87,171 +89,110 @@ plt.title("Explained Variance by Components")
 plt.savefig("output/clustering/explained_variance.png")
 plt.close()
 
-# Elbow method to find optimal K
-inertia = []
-for k in range(1, 11):
-    kmeans = KMeans(n_clusters=k, random_state=42)
-    kmeans.fit(X_scaled)
-    inertia.append(kmeans.inertia_)
+# Fit a range of Gaussian Mixture Models
+gmm_bic = []
+gmm_aic = []
+n_components_range = range(1, 11)
+for n_components in n_components_range:
+    gmm = GaussianMixture(
+        n_components=n_components, covariance_type="full", random_state=42, max_iter=200
+    )
+    gmm.fit(X_scaled)
+    gmm_bic.append(gmm.bic(X_scaled))
+    gmm_aic.append(gmm.aic(X_scaled))
 
-plt.figure(figsize=(10, 6))
-plt.plot(range(1, 11), inertia, marker="o")
-plt.title("Elbow Method for Optimal K")
-plt.xlabel("Number of clusters")
-plt.ylabel("Inertia")
-plt.grid(True)
-plt.savefig("output/clustering/elbow_method.png")
-plt.close()
-
-# Silhouette analysis
-silhouette_scores = []
-for k in range(2, 11):
-    kmeans = KMeans(n_clusters=k, random_state=42)
-    cluster_labels = kmeans.fit_predict(X_scaled)
-    silhouette_avg = silhouette_score(X_scaled, cluster_labels)
-    silhouette_scores.append(silhouette_avg)
-    print(f"For n_clusters = {k}, the silhouette score is {silhouette_avg}")
-
-plt.figure(figsize=(10, 6))
-plt.plot(range(2, 11), silhouette_scores, marker="o")
-plt.title("Silhouette Score for Different K Values")
-plt.xlabel("Number of clusters")
-plt.ylabel("Silhouette Score")
-plt.grid(True)
-plt.savefig("output/clustering/silhouette_analysis.png")
-plt.close()
-
-# Dendrogram to visualize hierarchical clustering
-plt.figure(figsize=(12, 8))
-dend = shc.dendrogram(shc.linkage(X_scaled, method="ward"))
-plt.title("Dendrogram for Hierarchical Clustering")
-plt.xlabel("Samples")
-plt.ylabel("Euclidean Distance")
-plt.axhline(y=6, color="r", linestyle="--")
-plt.savefig("output/clustering/dendrogram.png")
-plt.close()
-
-
-# Apply K-Means with optimal K
-optimal_k = 4
-kmeans = KMeans(n_clusters=optimal_k, random_state=42, n_init=10)
-cluster_labels = kmeans.fit_predict(X_scaled)
-
-# Add cluster labels to original data
-df["cluster"] = cluster_labels
-
-# Visualize clusters in PCA space
-plt.figure(figsize=(12, 8))
-scatter = plt.scatter(X_pca[:, 0], X_pca[:, 1], c=cluster_labels, cmap="viridis", alpha=0.6, s=50)
-plt.colorbar(scatter, label="Cluster")
-plt.title(f"K-Means Clustering (K={optimal_k}) Visualized with PCA")
-plt.xlabel("Principal Component 1")
-plt.ylabel("Principal Component 2")
-plt.grid(True)
-
-# Plot centroids in PCA space
-centroids_pca = pca.transform(kmeans.cluster_centers_)
-plt.scatter(centroids_pca[:, 0], centroids_pca[:, 1], marker="X", s=200, c="red", label="Centroids")
-plt.legend()
-plt.savefig("output/clustering/kmeans_clusters_pca.png")
-plt.close()
-
-# Analyze clusters
-cluster_profiles = df.groupby("cluster")[cluster_features].mean()
-print("Cluster Profiles (Mean Values):")
-print(cluster_profiles)
-
-# Visualize cluster profiles
-plt.figure(figsize=(14, 8))
-cluster_profiles.T.plot(kind="bar", ax=plt.gca())
-plt.title("Mean Values of Features Across Clusters")
-plt.ylabel("Mean Value")
-plt.xticks(rotation=45)
-plt.legend(title="Cluster")
-plt.grid(True, axis="y")
-plt.tight_layout()
-plt.savefig("output/clustering/cluster_profiles.png")
-plt.close()
-
-# Boxplots for each feature by cluster
-for feature in cluster_features:
-    plt.figure(figsize=(10, 6))
-    sns.boxplot(x="cluster", y=feature, data=df)
-    plt.title(f"Distribution of {feature} by Cluster")
-    plt.grid(True, axis="y")
-    plt.tight_layout()
-    plt.savefig(f"output/clustering/boxplot_{feature}_by_cluster.png")
-    plt.close()
-
-# Analyze demographic composition of clusters
-demographic_vars = ["Age_gap", "Gender", "Marital_status", "Highest_edu", "Work_ref", "Immigrant"]
-
-for var in demographic_vars:
-    plt.figure(figsize=(12, 6))
-    cross_tab = pd.crosstab(df["cluster"], df[var], normalize="index") * 100
-    cross_tab.plot(kind="bar", stacked=True)
-    plt.title(f"Distribution of {var} within Clusters")
-    plt.ylabel("Percentage (%)")
-    plt.legend(title=var)
-    plt.xticks(rotation=0)
-    plt.grid(True, axis="y")
-    plt.tight_layout()
-    plt.savefig(f"output/clustering/distribution_{var}_by_cluster.png")
-    plt.close()
-
-# Apply hierarchical clustering
-hier_cluster = AgglomerativeClustering(n_clusters=optimal_k, linkage="ward")
-hier_labels = hier_cluster.fit_predict(X_scaled)
-
-# Visualize hierarchical clusters in PCA space
-plt.figure(figsize=(12, 8))
-scatter = plt.scatter(X_pca[:, 0], X_pca[:, 1], c=hier_labels, cmap="viridis", alpha=0.6, s=50)
-plt.colorbar(scatter, label="Cluster")
-plt.title(f"Hierarchical Clustering (K={optimal_k}) Visualized with PCA")
-plt.xlabel("Principal Component 1")
-plt.ylabel("Principal Component 2")
-plt.grid(True)
-plt.show()
-
-# Compare K-means and Hierarchical clustering
-plt.figure(figsize=(15, 6))
-
+plt.figure(figsize=(12, 5))
 plt.subplot(1, 2, 1)
-plt.scatter(X_pca[:, 0], X_pca[:, 1], c=cluster_labels, cmap="viridis", alpha=0.6, s=50)
-plt.title("K-Means Clustering")
-plt.xlabel("PC1")
-plt.ylabel("PC2")
+plt.plot(n_components_range, gmm_bic, marker="o")
+plt.title("BIC by Components")
+plt.xlabel("Number of Components")
+plt.ylabel("BIC Score")
 
 plt.subplot(1, 2, 2)
-plt.scatter(X_pca[:, 0], X_pca[:, 1], c=hier_labels, cmap="viridis", alpha=0.6, s=50)
-plt.title("Hierarchical Clustering")
-plt.xlabel("PC1")
-plt.ylabel("PC2")
-
+plt.plot(n_components_range, gmm_aic, marker="o")
+plt.title("AIC by Components")
+plt.xlabel("Number of Components")
+plt.ylabel("AIC Score")
 plt.tight_layout()
-plt.savefig("output/clustering/comparison_kmeans_hierarchical.png")
+plt.savefig("output/clustering/gmm_aic_bic.png")
 plt.close()
 
-# Apply DBSCAN
-dbscan = DBSCAN(eps=0.5, min_samples=5)
-dbscan_labels = dbscan.fit_predict(X_scaled)
+# Select optimal number of components based on BIC
+optimal_components = n_components_range[np.argmin(gmm_bic)]
+print(f"Optimal number of components based on BIC: {optimal_components}")
 
-# Visualize DBSCAN clusters
+# Fit the optimal GMM model
+gmm = GaussianMixture(n_components=optimal_components, covariance_type="full", random_state=42)
+gmm_labels = gmm.fit_predict(X_scaled)
+gmm_probs = gmm.predict_proba(X_scaled)
+
+# Add GMM cluster labels to DataFrame
+df["gmm_cluster"] = gmm_labels
+
+# Visualize GMM clusters in PCA space
 plt.figure(figsize=(12, 8))
-scatter = plt.scatter(X_pca[:, 0], X_pca[:, 1], c=dbscan_labels, cmap="viridis", alpha=0.6, s=50)
+scatter = plt.scatter(X_pca[:, 0], X_pca[:, 1], c=gmm_labels, cmap="viridis", alpha=0.6, s=50)
 plt.colorbar(scatter, label="Cluster")
-plt.title("DBSCAN Clustering Visualized with PCA")
+plt.title(f"GMM Clustering (Components={optimal_components}) with PCA")
 plt.xlabel("Principal Component 1")
 plt.ylabel("Principal Component 2")
 plt.grid(True)
-plt.savefig("output/clustering/dbscan_clusters_pca.png")
+plt.savefig("output/clustering/gmm_clusters_pca.png")
 plt.close()
 
-# Count samples in each cluster
-unique_clusters, counts = np.unique(dbscan_labels, return_counts=True)
-print("DBSCAN Clusters:")
-for cluster, count in zip(unique_clusters, counts):
-    if cluster == -1:
-        print(f"Noise points: {count}")
-    else:
-        print(f"Cluster {cluster}: {count} points")
+# Visualize GMM cluster probabilities
+sample_size = min(1000, len(X_scaled))
+indices = np.random.choice(range(len(X_scaled)), sample_size, replace=False)
+
+plt.figure(figsize=(14, 10))
+for i in range(optimal_components):
+    plt.subplot(2, (optimal_components + 1) // 2, i + 1)
+    plt.scatter(
+        X_pca[indices, 0],
+        X_pca[indices, 1],
+        c=gmm_probs[indices, i],
+        cmap="viridis",
+        vmin=0,
+        vmax=1,
+        s=30,
+    )
+    plt.colorbar(label="Probability")
+    plt.title(f"Cluster {i} Probability")
+    plt.xlabel("PC1")
+    plt.ylabel("PC2")
+plt.tight_layout()
+plt.savefig("output/clustering/gmm_cluster_probabilities.png")
+plt.close()
+
+# Fit a Bayesian Gaussian Mixture Model with Dirichlet process prior
+vbgmm = BayesianGaussianMixture(
+    n_components=10,  # Upper bound on number of components
+    weight_concentration_prior=1 / 10,
+    weight_concentration_prior_type="dirichlet_process",
+    covariance_type="full",
+    random_state=42,
+    max_iter=200,
+)
+vbgmm.fit(X_scaled)
+vbgmm_labels = vbgmm.predict(X_scaled)
+
+# Get effective number of components
+effective_components = np.sum(vbgmm.weights_ > 0.01)
+print(f"Effective number of components in VBGMM: {effective_components}")
+print("Component weights:", vbgmm.weights_)
+
+# Add VBGMM cluster labels to DataFrame
+df["vbgmm_cluster"] = vbgmm_labels
+
+# Visualize VBGMM clusters in PCA space
+plt.figure(figsize=(12, 8))
+scatter = plt.scatter(X_pca[:, 0], X_pca[:, 1], c=vbgmm_labels, cmap="viridis", alpha=0.6, s=50)
+plt.colorbar(scatter, label="Cluster")
+plt.title("Variational Bayesian GMM Clustering with PCA")
+plt.xlabel("Principal Component 1")
+plt.ylabel("Principal Component 2")
+plt.grid(True)
+plt.savefig("output/clustering/vbgmm_clusters_pca.png")
+plt.close()
+
+
