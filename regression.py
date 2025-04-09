@@ -350,6 +350,11 @@ nonlinear_model, trace_nonlinear = build_nonlinear_model(X_train.values, y_train
 # Evaluate non-linear model
 az.summary(trace_nonlinear)
 
+# Plot trace to check convergence
+az.plot_trace(trace_nonlinear)
+plt.tight_layout()
+plt.savefig("output/regression/regression_non_linear_model_trace.png")
+plt.close()
 
 def predict_nonlinear(trace, X):
     # Extract posterior samples
