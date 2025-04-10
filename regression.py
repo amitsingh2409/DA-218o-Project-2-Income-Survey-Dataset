@@ -356,6 +356,7 @@ plt.tight_layout()
 plt.savefig("output/regression/regression_non_linear_model_trace.png")
 plt.close()
 
+
 def predict_nonlinear(trace, X):
     # Extract posterior samples
     posterior_intercept = trace.posterior["intercept"].values.flatten()
@@ -500,6 +501,7 @@ def predict_robust(trace, X):
     )
 
     return predictions.mean(axis=0)
+
 
 # Build robust model
 robust_model, trace_robust = build_robust_model(X_train.values, y_train)

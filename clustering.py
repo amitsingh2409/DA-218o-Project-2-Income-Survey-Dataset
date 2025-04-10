@@ -194,5 +194,3 @@ plt.ylabel("Principal Component 2")
 plt.grid(True)
 plt.savefig("output/clustering/vbgmm_clusters_pca.png")
 plt.close()
-
-
